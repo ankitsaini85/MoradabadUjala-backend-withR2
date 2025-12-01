@@ -14,6 +14,8 @@ const userSchema = new mongoose.Schema({
   approvedAt: { type: Date },
   // Optional avatar path for reporter ID card
   avatar: { type: String },
+  // Optional display role/title shown on the press card (e.g. "Reporter Tehsil Bilari")
+  pressRole: { type: String },
   // Reporter region/locality (shown on press ID card)
   region: { type: String },
 }, { timestamps: true });

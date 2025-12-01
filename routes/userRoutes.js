@@ -50,6 +50,7 @@ router.get('/reporters', auth.verifyToken, auth.requireRole('superadmin'), async
       }
       const out = Object.assign({}, u);
       out.avatar = avatar;
+      out.pressRole = u.pressRole || '';
       delete out.avatarData;
       delete out.avatarMime;
       // include region in public response (if present)
@@ -88,6 +89,8 @@ router.get('/me', auth.verifyToken, async (req, res) => {
     delete out.avatarMime;
     // include region for frontend
     out.region = user.region || '';
+    // include display role for press card
+    out.pressRole = user.pressRole || '';
 
     res.json({ success: true, data: out });
   } catch (err) {
@@ -169,7 +172,7 @@ router.get('/reporters/:id/card', async (req, res) => {
         avatar,
         approvedAt: user.approvedAt,
         validUntil: validUntil.toISOString(),
-        roleLabel: 'Reporter',
+        roleLabel: user.pressRole && user.pressRole.trim() ? user.pressRole : 'Reporter',
         region: user.region || '',
       }
     });

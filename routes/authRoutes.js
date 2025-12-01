@@ -45,7 +45,7 @@ if (objectStorage && objectStorage.enabled) {
 // Reporter self-registration (will be pending approval)
 router.post('/register-reporter', upload.single('avatar'), async (req, res) => {
   try {
-    const { name, email, password, region } = req.body;
+    const { name, email, password, region, pressRole } = req.body;
     if (!name || !email || !password) return res.status(400).json({ success: false, message: 'Missing fields' });
 
     const existing = await User.findOne({ email });
@@ -65,9 +65,10 @@ router.post('/register-reporter', upload.single('avatar'), async (req, res) => {
       reporterId = makeReporterId();
     }
 
-    // if avatar uploaded, save path; persist region if provided
+    // if avatar uploaded, save path; persist region and pressRole if provided
     let userData = { name, email, password, role: 'reporter', isApproved: false, reporterId };
     if (region && typeof region === 'string' && region.trim()) userData.region = region.trim();
+    if (pressRole && typeof pressRole === 'string' && pressRole.trim()) userData.pressRole = pressRole.trim();
     if (req.file) {
       // If memory buffer present and objectStorage enabled, upload to R2
       if (req.file.buffer && objectStorage && objectStorage.enabled) {

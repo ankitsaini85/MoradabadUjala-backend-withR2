@@ -133,38 +133,25 @@ app.use('/uploads/:file(*)', async (req, res, next) => {
 
 // Serve uploads: when object storage enabled, redirect requests to R2 public URL
 if (objectStorage && objectStorage.enabled) {
-  app.use('/uploads/:file(*)', async (req, res) => {
+  app.use('/uploads/:file(*)', (req, res) => {
     try {
-      const axios = require('axios');
       const filename = String(req.params.file || '').trim();
       if (!filename) return res.status(400).send('Bad Request');
+      // map to R2 key and return a presigned URL so objects can be private
       const key = `uploads/${filename}`;
-
-      // Determine a target URL to fetch from R2. Prefer signed URL if available (server can fetch it),
-      // otherwise use public URL. If R2_PUBLIC_URL is configured prefer that.
-      let target;
       try {
+        // If a public dev URL is configured, prefer it (public access).
         if (process.env.R2_PUBLIC_URL) {
-          target = objectStorage.getPublicUrl(key);
-        } else if (objectStorage.getSignedUrl) {
-          target = objectStorage.getSignedUrl(key);
-        } else {
-          target = objectStorage.getPublicUrl(key);
+          return res.redirect(302, objectStorage.getPublicUrl(key));
         }
+        const url = objectStorage.getSignedUrl(key);
+        return res.redirect(302, url);
       } catch (e) {
-        target = objectStorage.getPublicUrl(key);
+        // fallback to public URL if signing fails
+        return res.redirect(302, objectStorage.getPublicUrl(key));
       }
-
-      // Stream the object server-side and add CORS header so browsers can read it
-      const resp = await axios.get(target, { responseType: 'stream', timeout: 15000 });
-      if (resp.headers['content-type']) res.setHeader('Content-Type', resp.headers['content-type']);
-      if (resp.headers['cache-control']) res.setHeader('Cache-Control', resp.headers['cache-control']);
-      // allow cross-origin so html2canvas and browsers can read the image
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Expose-Headers', 'Content-Type, Cache-Control');
-      resp.data.pipe(res);
     } catch (e) {
-      console.warn('Error proxying upload from object storage:', e && e.message);
+      console.warn('Error redirecting upload to object storage:', e && e.message);
       return res.status(500).send('Server error');
     }
   });
